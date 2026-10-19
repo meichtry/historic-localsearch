@@ -24,7 +24,7 @@
         }
 
         .left-panel {
-            flex-basis: 280px;
+            flex-basis: 340px;
             flex-shrink: 0;
             padding: 20px;
             background-color: #f4f4f4;
@@ -139,18 +139,7 @@
     <div class="container">
         <div class="left-panel">
             <div>
-                <div class="form-group">
-                    <label for="annuaireDropdown">Annuaire :</label>
-                    <select id="annuaireDropdown">
-                        <option value="">Sélectionnez un annuaire</option>
-                        <option value="P-260-1_1">P-260-1_1 (GE, VD, VS, FR, NE, BE - dès 1911)</option>
-                        <option value="P-260-1_Geneve">P-260-1_Geneve (jusqu'en 1910)</option>
-                        <option value="P-260-1_3">P-260-1_3 (ZH - dès 1911)</option>
-                        <option value="P-260-1_Zuerich">P-260-1_Zuerich (1880-1910)</option>
-                    </select>
-                    <input type="text" id="annuaireText" placeholder="Ou saisissez un code annuaire" style="margin-top: 6px;">
-                </div>
-
+                <!-- 1. Sélection de l'année -->
                 <div class="form-group">
                     <label for="year">Année (1880 - 1950) :</label>
                     <input type="number" id="year" value="1920" min="1880" max="1950">
@@ -158,15 +147,23 @@
                 </div>
 
                 <div class="button-group">
-                    <button id="btnYearDec">- 1 an</button>
-                    <button id="btnYearInc">+ 1 an</button>
+                    <button id="btnYearDec10">- 10</button>
+                    <button id="btnYearDec1">- 1</button>
+                    <button id="btnYearInc1">+ 1</button>
+                    <button id="btnYearInc10">+ 10</button>
                 </div>
 
+                <!-- 2. Groupe de sélection de l'annuaire (regroupé) -->
                 <div class="form-group">
-                    <label for="yearExtension">Extension d'année :</label>
-                    <input type="text" id="yearExtension" placeholder="Optionnel (ex: _a)">
+                    <label for="annuaireDropdown">Annuaire :</label>
+                    <select id="annuaireDropdown">
+                        <option value="">Sélectionnez un annuaire</option>
+                    </select>
+                    <input type="text" id="annuaireText" placeholder="Ou saisissez un code manuel" style="margin-top: 6px;">
+                    <input type="text" id="annuaireExtension" placeholder="Extension optionnelle (ex: _a)" style="margin-top: 6px;">
                 </div>
 
+                <!-- 3. Sélection de la page -->
                 <div class="form-group">
                     <label for="page">Page (0001 - 9999) :</label>
                     <input type="number" id="page" value="1" min="1" max="9999">
@@ -202,31 +199,72 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const annuairesConfig = [
+                { value: "P-260-1_Geneve", label: "P-260-1_Geneve (jusqu'en 1910)", start: 1880, end: 1910 },
+                { value: "P-260-1_Zuerich", label: "P-260-1_Zuerich (1880-1910)", start: 1880, end: 1910 },
+                { value: "P-260-1_1", label: "P-260-1_1 (GE, VD, VS, FR, NE, BE - dès 1911)", start: 1911, end: 1950 },
+                { value: "P-260-1_3", label: "P-260-1_3 (ZH - dès 1911)", start: 1911, end: 1946 },
+                { value: "P-260-1_3a", label: "P-260-1_3a (ZH Stadt - dès 1947)", start: 1947, end: 1950 }
+            ];
+
             const annuaireDropdown = document.getElementById('annuaireDropdown');
             const annuaireText = document.getElementById('annuaireText');
+            const annuaireExtensionInput = document.getElementById('annuaireExtension');
             const yearInput = document.getElementById('year');
-            const yearExtensionInput = document.getElementById('yearExtension');
             const yearError = document.getElementById('yearError');
             const pageInput = document.getElementById('page');
             const pageError = document.getElementById('pageError');
             const iframe = document.getElementById('resultFrame');
             const urlLink = document.getElementById('urlLink');
 
+            function filterAnnuairesByYear(currentYear) {
+                const currentSelected = annuaireText.value.trim();
+                annuaireDropdown.innerHTML = '<option value="">Sélectionnez un annuaire</option>';
+
+                let isStillValid = false;
+
+                annuairesConfig.forEach(item => {
+                    if (currentYear >= item.start && currentYear <= item.end) {
+                        const opt = document.createElement('option');
+                        opt.value = item.value;
+                        opt.textContent = item.label;
+                        if (item.value === currentSelected) {
+                            opt.selected = true;
+                            isStillValid = true;
+                        }
+                        annuaireDropdown.appendChild(opt);
+                    }
+                });
+
+                if (!isStillValid && currentSelected !== "") {
+                    const isFromConfig = annuairesConfig.some(a => a.value === currentSelected);
+                    if (isFromConfig) {
+                        annuaireText.value = "";
+                    }
+                }
+            }
+
             function updateIframe() {
+                const yearVal = yearInput.value.trim();
+                const year = parseInt(yearVal, 10);
+
+                if (yearVal.length === 4 && year >= 1880 && year <= 1950) {
+                    yearError.style.display = 'none';
+                    filterAnnuairesByYear(year);
+                } else {
+                    if (yearVal.length === 4) {
+                        yearError.style.display = 'block';
+                    }
+                    return;
+                }
+
                 const annuaire = annuaireText.value.trim();
 
                 if (!annuaire) {
                     urlLink.href = "#";
-                    urlLink.textContent = "Veuillez sélectionner ou saisir un annuaire.";
+                    urlLink.textContent = "Veuillez sélectionner ou saisir un annuaire valide pour l'année " + year + ".";
                     iframe.srcdoc = "";
                     return;
-                }
-
-                let year = parseInt(yearInput.value, 10) || 1920;
-                if (year < 1880 || year > 1950) {
-                    yearError.style.display = 'block';
-                } else {
-                    yearError.style.display = 'none';
                 }
 
                 let page = parseInt(pageInput.value, 10) || 1;
@@ -237,11 +275,11 @@
                 }
 
                 const formattedPage = page.toString().padStart(4, '0');
-                const yearExtension = yearExtensionInput.value.trim();
+                const annuaireExtension = annuaireExtensionInput.value.trim();
 
                 const encodedAnnuaire = encodeURIComponent(annuaire);
                 const encodedYear = encodeURIComponent(year);
-                const encodedExt = encodeURIComponent(yearExtension);
+                const encodedExt = encodeURIComponent(annuaireExtension);
                 const url = `https://iiif.ptt-archiv.ch/iiif/3/${encodedAnnuaire}_${encodedYear}${encodedExt}_${formattedPage}.jp2/full/max/0/default.jpg`;
 
                 iframe.srcdoc = `
@@ -288,22 +326,26 @@
                 updateIframe();
             }
 
-            // Événements de saisie en direct
+            // Événements
             annuaireDropdown.addEventListener('change', (e) => {
                 annuaireText.value = e.target.value;
                 updateIframe();
             });
 
             annuaireText.addEventListener('input', updateIframe);
+            annuaireExtensionInput.addEventListener('input', updateIframe);
             yearInput.addEventListener('input', updateIframe);
-            yearExtensionInput.addEventListener('input', updateIframe);
             pageInput.addEventListener('input', updateIframe);
 
-            // Boutons
             document.getElementById('btnRefresh').addEventListener('click', updateIframe);
-            document.getElementById('btnYearDec').addEventListener('click', () => changeYear(-1));
-            document.getElementById('btnYearInc').addEventListener('click', () => changeYear(1));
+            
+            // Boutons d'année (-10, -1, +1, +10)
+            document.getElementById('btnYearDec10').addEventListener('click', () => changeYear(-10));
+            document.getElementById('btnYearDec1').addEventListener('click', () => changeYear(-1));
+            document.getElementById('btnYearInc1').addEventListener('click', () => changeYear(1));
+            document.getElementById('btnYearInc10').addEventListener('click', () => changeYear(10));
 
+            // Boutons de page
             document.getElementById('btnPageDec100').addEventListener('click', () => changePage(-100));
             document.getElementById('btnPageDec10').addEventListener('click', () => changePage(-10));
             document.getElementById('btnPageDec1').addEventListener('click', () => changePage(-1));
@@ -315,7 +357,7 @@
                 window.open('https://historic.localsearch.ch/fr', '_blank');
             });
 
-            // Flèches du clavier
+            // Navigation au clavier
             document.addEventListener('keydown', (e) => {
                 if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
                     return;
@@ -327,7 +369,7 @@
                 }
             });
 
-            // Premier affichage
+            // Initialisation
             updateIframe();
         });
     </script>
