@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Helper to find info from the PTT archives</title>
+    <title>PTT Archives Helper</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -12,97 +16,113 @@
             height: 100vh;
             overflow: hidden;
         }
+
         .container {
             display: flex;
             width: 100%;
             height: 100%;
         }
+
         .left-panel {
-            flex-basis: 20%;
+            flex-basis: 280px;
+            flex-shrink: 0;
             padding: 20px;
             background-color: #f4f4f4;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            overflow-y: auto;
         }
-       .right-panel {
+
+        .right-panel {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            align-items: center; /* Centering content horizontally */
-            justify-content: center; /* Centering content vertically */
+            align-items: center;
+            justify-content: center;
+            background-color: #eaeaea;
         }
+
         .right-panel iframe {
             width: 100%;
             height: 100%;
             border: none;
-            object-fit: contain; /* Makes the image adapt to the height, respecting aspect ratio */
-            overflow: hidden;
         }
 
         .form-group {
             margin-bottom: 15px;
         }
+
         .form-group label {
             display: block;
             margin-bottom: 5px;
+            font-weight: bold;
         }
-        .form-group input {
+
+        .form-group input, 
+        .form-group select {
             width: 100%;
             padding: 8px;
-            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
 
         .button-group {
             display: flex;
-            gap: 10px;
+            flex-wrap: wrap;
+            gap: 5px;
             justify-content: center;
             margin-bottom: 15px;
         }
-        .button-group button {
-            padding: 5px 10px;
+
+        .button-group button,
+        .external-link button {
+            padding: 8px 12px;
             cursor: pointer;
             background-color: #007BFF;
             color: white;
             border: none;
-            border-radius: 5px;
-            transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+            border-radius: 4px;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
         }
-        .button-group button:hover {
+
+        .button-group button:hover,
+        .external-link button:hover {
             background-color: #0056b3;
-	    transform: scale(1.05); /* Slightly increase button size on hover */
-	    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow on hover */
+            transform: scale(1.03);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
         .external-link {
-            margin-top: auto; /* Push the button to the bottom */
-            padding: 10px 0;
+            margin-top: auto;
+            padding-top: 15px;
             text-align: center;
         }
+
         .external-link button {
-            background-color: #007BFF; -- 50% lighter #80BFFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .external-link button:hover {
-            background-color: #0056b3;
-	    transform: scale(1.05); /* Slightly increase button size on hover */
-	    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow on hover */
+            width: 100%;
+            padding: 10px;
         }
 
         .url-display {
+            width: 100%;
             padding: 10px;
-            background-color: #f4f4f4;
+            background-color: #ffffff;
             font-family: monospace;
-            word-wrap: break-word;
+            word-break: break-all;
             text-align: center;
+            border-bottom: 1px solid #ccc;
         }
+
+        .error-message {
+            color: #d9534f;
+            font-size: 0.85em;
+            display: none;
+            margin-top: 4px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -120,125 +140,112 @@
         <div class="left-panel">
             <div>
                 <div class="form-group">
-                    <label for="annuaire">Annuaire:</label>
-                    <select id="annuaireDropdown" aria-label="Annuaire Dropdown">
-                        <option value="">Select an option</option>
-                        <option value="P-260-1_1">P-260-1_1 (GE, VD, VS, FR, NE, BE (from 1911))</option>
-                        <option value="P-260-1_Geneve">P-260-1_Geneve (till 1910)</option>
-                        <option value="P-260-1_3">P-260-1_3 (ZH) (from 1911)</option> <!-- ;02 03 09 -->
-                        <option value="P-260-1_Zuerich">P-260-1_Zuerich (1880-1910)</option> <!-- ;*84*87*98*99*00;-81-82-88--90-96-99-07 -->
-                        <!-- Add more options as needed -->
+                    <label for="annuaireDropdown">Annuaire :</label>
+                    <select id="annuaireDropdown">
+                        <option value="">Sélectionnez un annuaire</option>
+                        <option value="P-260-1_1">P-260-1_1 (GE, VD, VS, FR, NE, BE - dès 1911)</option>
+                        <option value="P-260-1_Geneve">P-260-1_Geneve (jusqu'en 1910)</option>
+                        <option value="P-260-1_3">P-260-1_3 (ZH - dès 1911)</option>
+                        <option value="P-260-1_Zuerich">P-260-1_Zuerich (1880-1910)</option>
                     </select>
-                    <input type="text" id="annuaireText" placeholder="Or enter your own annuaire" aria-label="Annuaire Text">
+                    <input type="text" id="annuaireText" placeholder="Ou saisissez un code annuaire" style="margin-top: 6px;">
                 </div>
+
                 <div class="form-group">
-                    <label for="year">Year (Default: 1920):</label>
-                    <input type="number" id="year" value="1920" placeholder="Enter Year" aria-label="Year" min="1880">
-		    <small id="yearError" style="color:red; display:none;">Year must be between 1880 and 1950.</small>
+                    <label for="year">Année (1880 - 1950) :</label>
+                    <input type="number" id="year" value="1920" min="1880" max="1950">
+                    <small id="yearError" class="error-message">L'année doit être comprise entre 1880 et 1950.</small>
                 </div>
+
                 <div class="button-group">
-                    <button onclick="changeYear(-1);" aria-label="Decrease year by 1">- 1</button>
-                    <button onclick="changeYear(1);" aria-label="Increase year by 1">+ 1</button>
+                    <button id="btnYearDec">- 1 an</button>
+                    <button id="btnYearInc">+ 1 an</button>
                 </div>
+
                 <div class="form-group">
-                    <label for="yearExtension">Year Extension:</label>
-                    <input type="text" id="yearExtension" placeholder="Enter Year Extension (optional)" aria-label="Year Extension">
+                    <label for="yearExtension">Extension d'année :</label>
+                    <input type="text" id="yearExtension" placeholder="Optionnel (ex: _a)">
                 </div>
+
                 <div class="form-group">
-                    <label for="page">Page (Default: 0001):</label>
-                    <input type="number" id="page" value="0001" placeholder="Enter Page" aria-label="Page" min="1">
-		    <small id="pageError" style="color:red; display:none;">Page must be between 0001 and 9999.</small>
+                    <label for="page">Page (0001 - 9999) :</label>
+                    <input type="number" id="page" value="1" min="1" max="9999">
+                    <small id="pageError" class="error-message">La page doit être comprise entre 1 et 9999.</small>
                 </div>
+
                 <div class="button-group">
-                    <button onclick="changePage(-100);" aria-label="Decrease page by 100">- 100</button>
-                    <button onclick="changePage(-10);" aria-label="Decrease page by 10">- 10</button>
-                    <button onclick="changePage(-1);" aria-label="Decrease page by 1">- 1</button>
-                    <button onclick="changePage(1);" aria-label="Increase page by 1">+ 1</button>
-                    <button onclick="changePage(10);" aria-label="Increase page by 10">+ 10</button>
-                    <button onclick="changePage(100);" aria-label="Increase page by 100">+ 100</button>
+                    <button id="btnPageDec100">-100</button>
+                    <button id="btnPageDec10">-10</button>
+                    <button id="btnPageDec1">-1</button>
+                    <button id="btnPageInc1">+1</button>
+                    <button id="btnPageInc10">+10</button>
+                    <button id="btnPageInc100">+100</button>
                 </div>
+
                 <div class="button-group">
-                    <button onclick="updateIframe()">Refresh</button>
+                    <button id="btnRefresh" style="width: 100%; background-color: #28a745;">Actualiser</button>
                 </div>
             </div>
+
             <div class="external-link">
-                <button onclick="window.open('https://historic.localsearch.ch/fr', '_blank')" aria-label="Historic Search" aria-label="Historic Search">
-                    Go to Historic Search
-                </button>
+                <button id="btnHistoricSearch">Ouvrir Historic Search</button>
             </div>
         </div>
+
         <div class="right-panel">
             <div id="urlDisplay" class="url-display">
-                <a id="urlLink" href="#" target="_blank">URL will be displayed here</a>
+                <a id="urlLink" href="#" target="_blank" rel="noopener noreferrer">L'URL s'affichera ici</a>
             </div>
-            <iframe id="resultFrame" src="about:blank"></iframe>
+            <iframe id="resultFrame" title="Aperçu du document IIIF" src="about:blank"></iframe>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            
+        document.addEventListener('DOMContentLoaded', () => {
             const annuaireDropdown = document.getElementById('annuaireDropdown');
             const annuaireText = document.getElementById('annuaireText');
             const yearInput = document.getElementById('year');
+            const yearExtensionInput = document.getElementById('yearExtension');
             const yearError = document.getElementById('yearError');
             const pageInput = document.getElementById('page');
             const pageError = document.getElementById('pageError');
             const iframe = document.getElementById('resultFrame');
             const urlLink = document.getElementById('urlLink');
 
-            // Event listener to update annuaireText when dropdown changes
-            annuaireDropdown.addEventListener('change', function() {
-                annuaireText.value = this.value;
-            });
-
             function updateIframe() {
-                const annuaire = annuaireText.value;
+                const annuaire = annuaireText.value.trim();
 
-
-                const yearExtensionInput = document.getElementById('yearExtension');
-
-                //const iframe = document.getElementById('resultFrame');
-                //const urlLink = document.getElementById('urlLink');
-
-		// Validation for required fields
                 if (!annuaire) {
-                    alert("Annuaire field is required.");
+                    urlLink.href = "#";
+                    urlLink.textContent = "Veuillez sélectionner ou saisir un annuaire.";
+                    iframe.srcdoc = "";
                     return;
                 }
-    
-				
-				
-				
-                let year = parseInt(document.getElementById('year').value) || 1920;
-                // Validate year with feedback
+
+                let year = parseInt(yearInput.value, 10) || 1920;
                 if (year < 1880 || year > 1950) {
-                    alert("Year must be between 1880 and 1950.");
-                    year = Math.min(Math.max(year, 1880), 1950);
                     yearError.style.display = 'block';
-                }else {
+                } else {
                     yearError.style.display = 'none';
                 }
-                yearInput.value = year;
 
-                let yearExtension = yearExtensionInput.value.trim(); // Get the value of the year extension
-
-                let page = parseInt(document.getElementById('page').value) || 1;
-                //let page = parseInt(pageInput.value) || 1;
+                let page = parseInt(pageInput.value, 10) || 1;
                 if (page < 1 || page > 9999) {
-                    alert("Page number must be between 1 and 9999.");
-                    page = Math.min(Math.max(page, 1), 9999);
                     pageError.style.display = 'block';
-                }else {
+                } else {
                     pageError.style.display = 'none';
                 }
-                pageInput.value = page.toString().padStart(4, '0');
 
-                const url = `https://iiif.ptt-archiv.ch/iiif/3/${encodeURIComponent(annuaire)}_${encodeURIComponent(year)}${encodeURIComponent(yearExtension)}_${encodeURIComponent(pageInput.value)}.jp2/full/max/0/default.jpg`;
-				// encodeURIComponent to safely include special characters in the URL
+                const formattedPage = page.toString().padStart(4, '0');
+                const yearExtension = yearExtensionInput.value.trim();
 
-                // Update iframe source
+                const encodedAnnuaire = encodeURIComponent(annuaire);
+                const encodedYear = encodeURIComponent(year);
+                const encodedExt = encodeURIComponent(yearExtension);
+                const url = `https://iiif.ptt-archiv.ch/iiif/3/${encodedAnnuaire}_${encodedYear}${encodedExt}_${formattedPage}.jp2/full/max/0/default.jpg`;
+
                 iframe.srcdoc = `
+                    <!DOCTYPE html>
                     <html>
                     <head>
                         <style>
@@ -249,7 +256,8 @@
                                 display: flex;
                                 justify-content: center;
                                 align-items: center;
-                                overflow: auto;
+                                background-color: #222;
+                                overflow: hidden;
                             }
                             img {
                                 max-width: 100%;
@@ -259,32 +267,68 @@
                         </style>
                     </head>
                     <body>
-                        <img src="${url}" alt="image">
+                        <img src="${url}" alt="Page d'annuaire">
                     </body>
-                    </html>`;
+                    </html>
+                `;
 
-                // Update URL display and make it clickable
                 urlLink.href = url;
                 urlLink.textContent = url;
             }
 
-            function changePage(delta) {
-                let currentPage = parseInt(pageInput.value);
-                currentPage = currentPage + delta
-                pageInput.value = currentPage;
-                updateIframe();
-            }
-
             function changeYear(delta) {
-                let currentYear = parseInt(yearInput.value);
-                currentYear = currentYear + delta;
-                yearInput.value = currentYear;
+                let currentYear = parseInt(yearInput.value, 10) || 1920;
+                yearInput.value = Math.min(Math.max(currentYear + delta, 1880), 1950);
                 updateIframe();
             }
 
-            window.updateIframe = updateIframe;
-            window.changePage = changePage;
-            window.changeYear = changeYear;
+            function changePage(delta) {
+                let currentPage = parseInt(pageInput.value, 10) || 1;
+                pageInput.value = Math.min(Math.max(currentPage + delta, 1), 9999);
+                updateIframe();
+            }
+
+            // Événements de saisie en direct
+            annuaireDropdown.addEventListener('change', (e) => {
+                annuaireText.value = e.target.value;
+                updateIframe();
+            });
+
+            annuaireText.addEventListener('input', updateIframe);
+            yearInput.addEventListener('input', updateIframe);
+            yearExtensionInput.addEventListener('input', updateIframe);
+            pageInput.addEventListener('input', updateIframe);
+
+            // Boutons
+            document.getElementById('btnRefresh').addEventListener('click', updateIframe);
+            document.getElementById('btnYearDec').addEventListener('click', () => changeYear(-1));
+            document.getElementById('btnYearInc').addEventListener('click', () => changeYear(1));
+
+            document.getElementById('btnPageDec100').addEventListener('click', () => changePage(-100));
+            document.getElementById('btnPageDec10').addEventListener('click', () => changePage(-10));
+            document.getElementById('btnPageDec1').addEventListener('click', () => changePage(-1));
+            document.getElementById('btnPageInc1').addEventListener('click', () => changePage(1));
+            document.getElementById('btnPageInc10').addEventListener('click', () => changePage(10));
+            document.getElementById('btnPageInc100').addEventListener('click', () => changePage(100));
+
+            document.getElementById('btnHistoricSearch').addEventListener('click', () => {
+                window.open('https://historic.localsearch.ch/fr', '_blank');
+            });
+
+            // Flèches du clavier
+            document.addEventListener('keydown', (e) => {
+                if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                    return;
+                }
+                if (e.key === 'ArrowLeft') {
+                    changePage(-1);
+                } else if (e.key === 'ArrowRight') {
+                    changePage(1);
+                }
+            });
+
+            // Premier affichage
+            updateIframe();
         });
     </script>
 </body>
