@@ -33,6 +33,16 @@
             flex-direction: column;
             justify-content: space-between;
             overflow-y: auto;
+            text-align: center;
+        }
+
+        /* Conteneur principal centré verticalement */
+        .left-panel-content {
+            margin: auto 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100%;
         }
 
         .right-panel {
@@ -53,12 +63,14 @@
 
         .form-group {
             margin-bottom: 15px;
+            text-align: center;
         }
 
         .form-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
+            text-align: center;
         }
 
         .form-group input, 
@@ -67,6 +79,41 @@
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
+            text-align: center;
+        }
+
+        /* Espace supplémentaire avant le champ Annuaire */
+        .form-group-annuaire {
+            margin-top: 35px;
+        }
+
+        /* Style pour aligner les libellés à gauche des champs */
+        .form-group-inline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .form-group-inline label {
+            margin-bottom: 0;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+
+        .form-group-inline input,
+        .form-group-inline select {
+            flex: 1;
+            min-width: 0;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .form-group-inline .error-message {
+            width: 100%;
         }
 
         .button-group {
@@ -95,8 +142,25 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
+        .info-badge {
+            background-color: #e7f3fe;
+            border-left: 4px solid #2196F3;
+            padding: 10px;
+            font-size: 0.85em;
+            color: #0c5460;
+            margin-bottom: 15px;
+            border-radius: 2px;
+            display: none;
+            text-align: center;
+        }
+
+        .info-badge.warning {
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+
         .external-link {
-            margin-top: auto;
             padding-top: 15px;
             text-align: center;
         }
@@ -121,6 +185,7 @@
             font-size: 0.85em;
             display: none;
             margin-top: 4px;
+            text-align: center;
         }
 
         @media (max-width: 768px) {
@@ -138,10 +203,18 @@
 <body>
     <div class="container">
         <div class="left-panel">
-            <div>
-                <!-- 1. Sélection de l'année -->
-                <div class="form-group">
-                    <label for="year">Année (1880 - 1950) :</label>
+            <div class="left-panel-content">
+                <!-- a) Sélection de la Région / Canton -->
+                <div class="form-group-inline">
+                    <label for="regionSelect">Région :</label>
+                    <select id="regionSelect">
+                        <option value="">Sélectionnez une région</option>
+                    </select>
+                </div>
+
+                <!-- b) Sélection de l'année -->
+                <div class="form-group-inline">
+                    <label for="year">Année :</label>
                     <input type="number" id="year" value="1920" min="1880" max="1950">
                     <small id="yearError" class="error-message">L'année doit être comprise entre 1880 et 1950.</small>
                 </div>
@@ -153,19 +226,18 @@
                     <button id="btnYearInc10">+ 10</button>
                 </div>
 
-                <!-- 2. Groupe de sélection de l'annuaire (regroupé) -->
-                <div class="form-group">
-                    <label for="annuaireDropdown">Annuaire :</label>
-                    <select id="annuaireDropdown">
-                        <option value="">Sélectionnez un annuaire</option>
-                    </select>
-                    <input type="text" id="annuaireText" placeholder="Ou saisissez un code manuel" style="margin-top: 6px;">
-                    <input type="text" id="annuaireExtension" placeholder="Extension optionnelle (ex: _a)" style="margin-top: 6px;">
+                <!-- c) Sélecteur d'édition dynamique -->
+                <div class="form-group-inline" id="editionGroup" style="display: none;">
+                    <label for="editionSelect">Édition :</label>
+                    <select id="editionSelect"></select>
                 </div>
 
-                <!-- 3. Sélection de la page -->
-                <div class="form-group">
-                    <label for="page">Page (0001 - 9999) :</label>
+                <!-- d) Champ d'information (Badge explicatif) -->
+                <div id="ruleNote" class="info-badge"></div>
+
+                <!-- e) Sélection de la page -->
+                <div class="form-group-inline">
+                    <label for="page">Page :</label>
                     <input type="number" id="page" value="1" min="1" max="9999">
                     <small id="pageError" class="error-message">La page doit être comprise entre 1 et 9999.</small>
                 </div>
@@ -179,8 +251,16 @@
                     <button id="btnPageInc100">+100</button>
                 </div>
 
+                <!-- f) Bouton Actualiser -->
                 <div class="button-group">
                     <button id="btnRefresh" style="width: 100%; background-color: #28a745;">Actualiser</button>
+                </div>
+
+                <!-- g) Groupe d'annuaire (Code et Extension) avec espacement accru -->
+                <div class="form-group form-group-annuaire">
+                    <label for="annuaireText">Annuaire :</label>
+                    <input type="text" id="annuaireText" placeholder="Code d'annuaire (auto ou manuel)">
+                    <input type="text" id="annuaireExtension" placeholder="Extension optionnelle (ex: _a)" style="margin-top: 6px;">
                 </div>
             </div>
 
@@ -198,50 +278,62 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const annuairesConfig = [
-                { value: "P-260-1_Geneve", label: "P-260-1_Geneve (jusqu'en 1910)", start: 1880, end: 1910 },
-                { value: "P-260-1_Zuerich", label: "P-260-1_Zuerich (1880-1910)", start: 1880, end: 1910 },
-                { value: "P-260-1_1", label: "P-260-1_1 (GE, VD, VS, FR, NE, BE - dès 1911)", start: 1911, end: 1950 },
-                { value: "P-260-1_3", label: "P-260-1_3 (ZH - dès 1911)", start: 1911, end: 1946 },
-                { value: "P-260-1_3a", label: "P-260-1_3a (ZH Stadt - dès 1947)", start: 1947, end: 1950 }
-            ];
+        // =========================================================================
+        // 1. LOGIQUE D'INTERFACE
+        // =========================================================================
 
-            const annuaireDropdown = document.getElementById('annuaireDropdown');
-            const annuaireText = document.getElementById('annuaireText');
-            const annuaireExtensionInput = document.getElementById('annuaireExtension');
+        document.addEventListener('DOMContentLoaded', () => {
             const yearInput = document.getElementById('year');
             const yearError = document.getElementById('yearError');
+            const regionSelect = document.getElementById('regionSelect');
+            const editionGroup = document.getElementById('editionGroup');
+            const editionSelect = document.getElementById('editionSelect');
+            const annuaireText = document.getElementById('annuaireText');
+            const annuaireExtensionInput = document.getElementById('annuaireExtension');
+            const ruleNote = document.getElementById('ruleNote');
             const pageInput = document.getElementById('page');
             const pageError = document.getElementById('pageError');
             const iframe = document.getElementById('resultFrame');
             const urlLink = document.getElementById('urlLink');
 
-            function filterAnnuairesByYear(currentYear) {
-                const currentSelected = annuaireText.value.trim();
-                annuaireDropdown.innerHTML = '<option value="">Sélectionnez un annuaire</option>';
-
-                let isStillValid = false;
-
-                annuairesConfig.forEach(item => {
-                    if (currentYear >= item.start && currentYear <= item.end) {
-                        const opt = document.createElement('option');
-                        opt.value = item.value;
-                        opt.textContent = item.label;
-                        if (item.value === currentSelected) {
-                            opt.selected = true;
-                            isStillValid = true;
-                        }
-                        annuaireDropdown.appendChild(opt);
-                    }
+            // Remplit le sélecteur de régions une fois pour toutes avec TOUTES les régions
+            function initRegionDropdown() {
+                regionSelect.innerHTML = '<option value="">Sélectionnez une région</option>';
+                REGIONS.forEach(reg => {
+                    const opt = document.createElement('option');
+                    opt.value = reg.id;
+                    opt.textContent = reg.label;
+                    regionSelect.appendChild(opt);
                 });
+                regionSelect.selectedIndex = 8; // Sélectionne la région par défaut
+            }
 
-                if (!isStillValid && currentSelected !== "") {
-                    const isFromConfig = annuairesConfig.some(a => a.value === currentSelected);
-                    if (isFromConfig) {
-                        annuaireText.value = "";
-                    }
-                }
+            function getRegionLabel(regionId) {
+                const reg = REGIONS.find(r => r.id === regionId);
+                return reg ? reg.label : regionId;
+            }
+
+            function findMatchingRule(regionId, year) {
+                if (regionId === 'manual') return null;
+
+                const exactRule = ARCHIVES_RULES.find(r => 
+                    r.regions.includes(regionId) && 
+                    r.type === 'exact' && 
+                    r.years.includes(year)
+                );
+                if (exactRule) return exactRule;
+
+                return ARCHIVES_RULES.find(r => 
+                    r.regions.includes(regionId) && 
+                    r.type === 'period' && 
+                    year >= r.start && year <= r.end
+                );
+            }
+
+            function resetAllOverrides() {
+                delete annuaireText.dataset.userModified;
+                delete annuaireExtensionInput.dataset.userModified;
+                annuaireExtensionInput.value = '';
             }
 
             function updateIframe() {
@@ -250,7 +342,6 @@
 
                 if (yearVal.length === 4 && year >= 1880 && year <= 1950) {
                     yearError.style.display = 'none';
-                    filterAnnuairesByYear(year);
                 } else {
                     if (yearVal.length === 4) {
                         yearError.style.display = 'block';
@@ -258,11 +349,80 @@
                     return;
                 }
 
-                const annuaire = annuaireText.value.trim();
+                const selectedRegionId = regionSelect.value;
+                if (!selectedRegionId) {
+                    urlLink.href = "#";
+                    urlLink.textContent = "Veuillez sélectionner une région.";
+                    iframe.srcdoc = "";
+                    ruleNote.style.display = 'none';
+                    editionGroup.style.display = 'none';
+                    return;
+                }
 
+                // Mode Manuel : Saisie libre sans contrôle automatique
+                if (selectedRegionId === 'manual') {
+                    ruleNote.textContent = "⚙️ Mode Manuel : saisie libre du code et de l'extension d'annuaire.";
+                    ruleNote.className = "info-badge";
+                    ruleNote.style.display = 'block';
+                    editionGroup.style.display = 'none';
+                } else {
+                    const rule = findMatchingRule(selectedRegionId, year);
+
+                    if (rule) {
+                        if (!annuaireText.dataset.userModified) {
+                            annuaireText.value = rule.baseCode;
+                        }
+
+                        ruleNote.className = "info-badge";
+                        if (rule.note) {
+                            ruleNote.textContent = "ℹ️ " + rule.note;
+                            ruleNote.style.display = 'block';
+                        } else {
+                            ruleNote.style.display = 'none';
+                        }
+
+                        // Gestion des éditions
+                        if (rule.editions && rule.editions.length > 0) {
+                            editionGroup.style.display = 'flex';
+                            const currentEd = editionSelect.value;
+                            editionSelect.innerHTML = '';
+                            rule.editions.forEach(ed => {
+                                const opt = document.createElement('option');
+                                opt.value = ed.value;
+                                opt.textContent = ed.label;
+                                if (ed.value === currentEd) opt.selected = true;
+                                editionSelect.appendChild(opt);
+                            });
+                            
+                            if (!annuaireExtensionInput.dataset.userModified) {
+                                annuaireExtensionInput.value = editionSelect.value;
+                            }
+                        } else {
+                            editionGroup.style.display = 'none';
+                            if (!annuaireExtensionInput.dataset.userModified) {
+                                annuaireExtensionInput.value = '';
+                            }
+                        }
+                    } else {
+                        // Aucun annuaire répertorié pour cette combinaison région / année
+                        ruleNote.textContent = `⚠️ Aucun annuaire connu pour ${getRegionLabel(selectedRegionId)} en ${year}.`;
+                        ruleNote.className = "info-badge warning";
+                        ruleNote.style.display = 'block';
+                        editionGroup.style.display = 'none';
+
+                        if (!annuaireText.dataset.userModified) {
+                            annuaireText.value = '';
+                        }
+                        if (!annuaireExtensionInput.dataset.userModified) {
+                            annuaireExtensionInput.value = '';
+                        }
+                    }
+                }
+
+                const annuaire = annuaireText.value.trim();
                 if (!annuaire) {
                     urlLink.href = "#";
-                    urlLink.textContent = "Veuillez sélectionner ou saisir un annuaire valide pour l'année " + year + ".";
+                    urlLink.textContent = `Aucun code d'annuaire répertorié pour ${getRegionLabel(selectedRegionId)} en ${year}.`;
                     iframe.srcdoc = "";
                     return;
                 }
@@ -327,18 +487,40 @@
             }
 
             // Événements
-            annuaireDropdown.addEventListener('change', (e) => {
-                annuaireText.value = e.target.value;
+            regionSelect.addEventListener('change', () => {
+                resetAllOverrides();
                 updateIframe();
             });
 
-            annuaireText.addEventListener('input', updateIframe);
-            annuaireExtensionInput.addEventListener('input', updateIframe);
+            editionSelect.addEventListener('change', () => {
+                annuaireExtensionInput.value = editionSelect.value;
+                delete annuaireExtensionInput.dataset.userModified;
+                updateIframe();
+            });
+
+            annuaireText.addEventListener('input', () => {
+                annuaireText.dataset.userModified = "true";
+                if (regionSelect.value !== 'manual') {
+                    regionSelect.value = 'manual';
+                }
+                annuaireExtensionInput.value = '';
+                delete annuaireExtensionInput.dataset.userModified;
+                updateIframe();
+            });
+
+            annuaireExtensionInput.addEventListener('input', () => {
+                annuaireExtensionInput.dataset.userModified = "true";
+                if (regionSelect.value !== 'manual') {
+                    regionSelect.value = 'manual';
+                }
+                updateIframe();
+            });
+
             yearInput.addEventListener('input', updateIframe);
             pageInput.addEventListener('input', updateIframe);
 
             document.getElementById('btnRefresh').addEventListener('click', updateIframe);
-            
+
             // Boutons d'année (-10, -1, +1, +10)
             document.getElementById('btnYearDec10').addEventListener('click', () => changeYear(-10));
             document.getElementById('btnYearDec1').addEventListener('click', () => changeYear(-1));
@@ -354,7 +536,7 @@
             document.getElementById('btnPageInc100').addEventListener('click', () => changePage(100));
 
             document.getElementById('btnHistoricSearch').addEventListener('click', () => {
-                window.open('https://historic.localsearch.ch/fr', '_blank');
+                window.open('https://historic.localsearch.ch/fr/search', '_blank');
             });
 
             // Navigation au clavier
@@ -370,8 +552,266 @@
             });
 
             // Initialisation
+            initRegionDropdown();
             updateIframe();
         });
+
+        // =========================================================================
+        // 2. STRUCTURE DE DONNÉES ET RÈGLES D'ARCHIVES (Facilement extensible ici)
+        // =========================================================================
+        
+        const REGIONS = [
+            { id: "zh_stadt", label: "Zurich (Ville / Stadt)" },
+            { id: "zh_land",  label: "Zurich (Canton / Land)" },
+            { id: "GE",       label: "Genève (GE)" },
+            { id: "VD",       label: "Vaud (VD)" },
+            { id: "VS",       label: "Valais (VS)" },
+            { id: "FR",       label: "Fribourg (FR)" },
+            { id: "NE",       label: "Neuchâtel (NE)" },
+            { id: "SO",       label: "Soleure (SO)" },
+            { id: "BE_stadt", label: "Berne (Ville)" },
+            { id: "BE_land",  label: "Berne (Canton)" },
+            { id: "TG",       label: "Thurgovie (TG)" },
+            { id: "manual",   label: "⚙️ Mode Manuel / Saisie libre" }
+        ];
+
+        const ARCHIVES_RULES = [
+            // --- Zurich (Ville & Canton) : Exceptions exactes & Périodes spécifiques ---
+            {
+                regions: ["zh_stadt", "zh_land"],
+                type: "exact",
+                years: [1888],
+                baseCode: "P-260-1_Glarus",
+                note: "Édition spéciale 1888 regroupée sous l'annuaire Glaris"
+            },
+            {
+                regions: ["zh_stadt", "zh_land"],
+                type: "exact",
+                years: [1884, 1887, 1898, 1899, 1900, 1904],
+                baseCode: "P-260-1_Zuerich",
+                editions: [
+                    { value: "_1", label: "Édition 1" },
+                    { value: "_2", label: "Édition 2" }
+                ],
+                note: "Année avec 2 éditions publiées"
+            },
+
+            // --- Romandie (GE, VD, VS, FR) : Exceptions exactes & Périodes spécifiques ---
+            {
+                regions: ["VD"],
+                type: "exact",
+                years: [1883],
+                baseCode: "P-260-1_Lausann",
+                note: "Vaud (1883)"
+            },
+            {
+                regions: ["GE"],
+                type: "exact",
+                years: [1884],
+                baseCode: "P-260-1_Geneve",
+                note: "Genève (1884)"
+            },
+            {
+                regions: ["GE", "VD"],
+                type: "exact",
+                years: [1885],
+                baseCode: "P-260-1_Geneve_Lausanne",
+                editions: [
+                    { value: "_1", label: "Édition 1" },
+                    { value: "_2", label: "Édition 2" }
+                ],
+                note: "Genève - Vaud (1885) (2 éditions)"
+            },
+            {
+                regions: ["GE"],
+                type: "exact",
+                years: [1891],
+                baseCode: "P-260-1_Geneve_Lausanne",
+                note: "Genève (1891)"
+            },
+            {
+                regions: ["GE", "VD"],
+                type: "exact",
+                years: [1895],
+                baseCode: "P-260-1_Geneve_Lausanne",
+                editions: [
+                    { value: "_1", label: "Édition 1" },
+                    { value: "_2", label: "Édition 2" }
+                ],
+                note: "Genève - Vaud (1895) (2 éditions)"
+            },
+            {
+                regions: ["GE", "VD"],
+                type: "period",
+                start: 1888,
+                end: 1894,
+                baseCode: "P-260-1_Geneve_Lausanne",
+                note: "Genève - Vaud (1888-1894)"
+            },
+            {
+                regions: ["GE", "VD", "VS"],
+                type: "exact",
+                years: [1902, 1903, 1909],
+                baseCode: "P-260-1_Genève",
+                note: "Genève - Vaud- Valais (Genève avec accent)"
+            },
+
+            // --- Romandie (GE, VD, VS, FR) : Période globale ---
+            {
+                regions: ["GE", "VD", "VS"],
+                type: "period",
+                start: 1897,
+                end: 1910,
+                baseCode: "P-260-1_Geneve",
+                note: "Genève - Vaud- Valais (1897-1910)"
+            },
+            {
+                regions: ["GE", "VD", "VS", "FR", "NE"],
+                type: "period",
+                start: 1911,
+                end: 1950,
+                baseCode: "P-260-1_1",
+                note: "Suisse romande (1911-1950)"
+            },
+
+            // --- Zurich & Thurgovie : Périodes globales ---
+            {
+                regions: ["zh_stadt", "zh_land"],
+                type: "period",
+                start: 1880,
+                end: 1910,
+                baseCode: "P-260-1_Zuerich",
+                note: "Zurich (1880-1910)"
+            },
+            {
+                regions: ["TG"],
+                type: "period",
+                start: 1880,
+                end: 1910,
+                baseCode: "P-260-1_St_Gallen",
+                note: "Thurgovie incluse dans l'annuaire St-Gall / Appenzell / Thurgovie"
+            },
+            {
+                regions: ["zh_stadt", "zh_land", "TG"],
+                type: "period",
+                start: 1911,
+                end: 1946,
+                baseCode: "P-260-1_3",
+                note: "Zurich & Suisse orientale (1911-1946)"
+            },
+            {
+                regions: ["zh_stadt"],
+                type: "period",
+                start: 1947,
+                end: 1950,
+                baseCode: "P-260-1_3a",
+                note: "Zurich Ville (dès 1947)"
+            },
+            {
+                regions: ["zh_land", "TG"],
+                type: "period",
+                start: 1947,
+                end: 1950,
+                baseCode: "P-260-1_3b",
+                note: "Zurich Canton & Thurgovie (dès 1947)"
+            },
+
+            // --- Berne, Soleure & autres : Exceptions exactes & Périodes spécifiques ---
+            {
+                regions: ["SO"],
+                type: "exact",
+                years: [1882],
+                baseCode: "P-260-1_Bern",
+                editions: [
+                    { value: "_2", label: "Édition 2" }
+                ],
+                note: "Berne, Soleure (1882)"
+            },
+            {
+                regions: ["SO"],
+                type: "exact",
+                years: [1884, 1887],
+                baseCode: "P-260-1_Solothurn",
+                note: "Soleure (1884)"
+            },
+            {
+                regions: ["BE_stadt", "BE_land"],
+                type: "exact",
+                years: [1882],
+                baseCode: "P-260-1_Bern",
+                editions: [
+                    { value: "_1", label: "Édition 1" },
+                    { value: "_2", label: "Édition 2" }
+                ],
+                note: "Berne (1882)"
+            },
+            {
+                regions: ["BE_stadt", "BE_land", "SO"],
+                type: "exact",
+                years: [1892, 1893, 1895, 1896],
+                baseCode: "P-260_Bern_ValdeTravers",
+                note: "Bâle, Berne, Soleure & ... (1892-1896)"
+            },
+            {
+                regions: ["BE_stadt", "BE_land", "SO"],
+                type: "exact",
+                years: [1898],
+                baseCode: "P-260-1_Bern",
+                note: "Bâle, Berne, Soleure & ... (1898)"
+            },
+            {
+                regions: ["BE_stadt", "BE_land", "SO"],
+                type: "exact",
+                years: [1900],
+                baseCode: "P-260-1_Bern",
+                editions: [
+                    { value: "_1", label: "Édition 1" },
+                    { value: "_2", label: "Édition 2" }
+                ],
+                note: "Bâle, Berne, Soleure & ... (1900)"
+            },
+            {
+                regions: ["BE_stadt", "BE_land", "SO"],
+                type: "exact",
+                years: [1901, 1902, 1904, 1905, 1906, 1907, 1908, 1909, 1910],
+                baseCode: "P-260-1_Bern",
+                note: "Bâle, Berne, Soleure & ... (1901-1910)"
+            },
+
+            // --- Berne, Soleure & autres : Périodes globales ---
+            {
+                regions: ["BE_stadt", "BE_land", "SO"],
+                type: "period",
+                start: 1911,
+                end: 1920,
+                baseCode: "P-260-1_2a",
+                note: "Berne, Soleure (1911-1920)"
+            },
+            {
+                regions: ["BE_stadt", "BE_land", "SO"],
+                type: "period",
+                start: 1921,
+                end: 1946,
+                baseCode: "P-260-1_2",
+                note: "Bâle, Berne, Soleure & ... (1921-1946)"
+            },
+            {
+                regions: ["BE_stadt"],
+                type: "period",
+                start: 1947,
+                end: 1950,
+                baseCode: "P-260-1_2a",
+                note: "Villes Bâle, Berne, Bienne & Lucerne (1947-1950)"
+            },
+            {
+                regions: ["BE_land", "SO"],
+                type: "period",
+                start: 1947,
+                end: 1950,
+                baseCode: "P-260-1_2b",
+                note: "Cantons Bâle, Berne & Lucerne (1947-1950)"
+            }
+        ];
     </script>
 </body>
 </html>
