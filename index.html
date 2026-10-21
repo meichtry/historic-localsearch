@@ -489,7 +489,6 @@
                 urlLink.href = url;
                 urlLink.textContent = url;
 
-                // Affichage dans l'iframe avec contrôles complets de Zoom & Pan
                 iframe.srcdoc = `
                     <!DOCTYPE html>
                     <html>
@@ -529,12 +528,13 @@
                                 img.style.transform = \`translate(\${pX}px, \${pY}px) scale(\${scale})\`;
                             }
 
-                            function setZoom(newScale, centerX, centerY) {
+                            // Zoom ciblé sur le point de contact/curseur
+                            function setZoom(newScale, targetX, targetY) {
                                 newScale = Math.max(0.5, Math.min(newScale, 8));
-                                if (centerX !== undefined && centerY !== undefined) {
+                                if (targetX !== undefined && targetY !== undefined) {
                                     const ratio = newScale / scale;
-                                    pX = centerX - (centerX - pX) * ratio;
-                                    pY = centerY - (centerY - pY) * ratio;
+                                    pX = targetX - (targetX - pX) * ratio;
+                                    pY = targetY - (targetY - pY) * ratio;
                                 }
                                 scale = newScale;
                                 updateTransform();
@@ -544,12 +544,17 @@
                             document.getElementById('btnZoomOut').addEventListener('click', () => setZoom(scale / 1.3));
                             document.getElementById('btnReset').addEventListener('click', () => { scale = 1; pX = 0; pY = 0; updateTransform(); });
 
+                            // Zoom molette orienté vers le curseur
                             container.addEventListener('wheel', (e) => {
                                 e.preventDefault();
+                                const rect = container.getBoundingClientRect();
+                                const mouseX = e.clientX - rect.left - rect.width / 2;
+                                const mouseY = e.clientY - rect.top - rect.height / 2;
                                 const delta = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-                                setZoom(scale * delta, e.clientX, e.clientY);
+                                setZoom(scale * delta, mouseX, mouseY);
                             }, { passive: false });
 
+                            // Déplacement à la souris (Pan)
                             container.addEventListener('mousedown', (e) => {
                                 if (e.target.tagName === 'BUTTON') return;
                                 isDragging = true;
@@ -566,6 +571,7 @@
 
                             window.addEventListener('mouseup', () => isDragging = false);
 
+                            // Support Tactile (Pinch & Pan)
                             let initialDist = 0;
                             container.addEventListener('touchstart', (e) => {
                                 if (e.touches.length === 1) {
@@ -584,9 +590,12 @@
                                     pY = e.touches[0].clientY - startY;
                                     updateTransform();
                                 } else if (e.touches.length === 2 && initialDist > 0) {
+                                    const rect = container.getBoundingClientRect();
+                                    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left - rect.width / 2;
+                                    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top - rect.height / 2;
                                     const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                                     const delta = currentDist / initialDist;
-                                    setZoom(scale * delta);
+                                    setZoom(scale * delta, midX, midY);
                                     initialDist = currentDist;
                                 }
                             });
