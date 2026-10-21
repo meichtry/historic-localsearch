@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PTT Archives Helper</title>
     <style>
         * {
@@ -15,6 +15,7 @@
             display: flex;
             height: 100vh;
             overflow: hidden;
+            touch-action: manipulation;
         }
 
         .container {
@@ -493,9 +494,10 @@
                     <!DOCTYPE html>
                     <html>
                     <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                         <style>
-                            body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #222; overflow: hidden; font-family: Arial, sans-serif; color: #ff6b6b; text-align: center; user-select: none; }
-                            #viewer-container { width: 100%; height: 100%; overflow: hidden; position: relative; cursor: grab; display: flex; align-items: center; justify-content: center; }
+                            body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #222; overflow: hidden; font-family: Arial, sans-serif; color: #ff6b6b; text-align: center; user-select: none; touch-action: none; }
+                            #viewer-container { width: 100%; height: 100%; overflow: hidden; position: relative; cursor: grab; display: flex; align-items: center; justify-content: center; touch-action: none; }
                             #viewer-container:active { cursor: grabbing; }
                             img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.05s ease-out; transform-origin: center center; }
                             .zoom-controls { position: absolute; top: 15px; right: 15px; display: flex; gap: 5px; z-index: 100; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 6px; }
@@ -511,8 +513,8 @@
                             <div class="zoom-controls">
                                 <button id="btnRotateLeft" title="Rotation 90° gauche">⟲</button>
                                 <button id="btnRotateRight" title="Rotation 90° droite">⟳</button>
-                                <button id="btnZoomIn" title="Zoom avant">+</button>
                                 <button id="btnZoomOut" title="Zoom arrière">−</button>
+                                <button id="btnZoomIn" title="Zoom avant">+</button>
                                 <button id="btnReset" title="Réinitialiser tout">↺</button>
                             </div>
                             <img id="imgViewer" src="${url}" alt="Page d'annuaire" onerror="this.style.display='none'; document.querySelector('.zoom-controls').style.display='none'; document.getElementById('err').style.display='block';">
@@ -541,7 +543,6 @@
                                 updateTransform();
                             }
 
-                            // Boutons de rotation
                             document.getElementById('btnRotateLeft').addEventListener('click', () => {
                                 rotation = (rotation - 90) % 360;
                                 updateTransform();
@@ -588,6 +589,8 @@
 
                             let initialDist = 0;
                             container.addEventListener('touchstart', (e) => {
+                                if (e.target.tagName === 'BUTTON') return;
+                                e.preventDefault();
                                 if (e.touches.length === 1) {
                                     isDragging = true;
                                     startX = e.touches[0].clientX - pX;
@@ -596,9 +599,10 @@
                                     isDragging = false;
                                     initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                                 }
-                            });
+                            }, { passive: false });
 
                             container.addEventListener('touchmove', (e) => {
+                                e.preventDefault();
                                 if (isDragging && e.touches.length === 1) {
                                     pX = e.touches[0].clientX - startX;
                                     pY = e.touches[0].clientY - startY;
@@ -612,7 +616,7 @@
                                     setZoom(scale * delta, midX, midY);
                                     initialDist = currentDist;
                                 }
-                            });
+                            }, { passive: false });
 
                             container.addEventListener('touchend', () => isDragging = false);
                         <\/script>
