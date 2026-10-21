@@ -509,9 +509,11 @@
                     <body>
                         <div id="viewer-container">
                             <div class="zoom-controls">
+                                <button id="btnRotateLeft" title="Rotation 90° gauche">⟲</button>
+                                <button id="btnRotateRight" title="Rotation 90° droite">⟳</button>
                                 <button id="btnZoomIn" title="Zoom avant">+</button>
                                 <button id="btnZoomOut" title="Zoom arrière">−</button>
-                                <button id="btnReset" title="Réinitialiser">↺</button>
+                                <button id="btnReset" title="Réinitialiser tout">↺</button>
                             </div>
                             <img id="imgViewer" src="${url}" alt="Page d'annuaire" onerror="this.style.display='none'; document.querySelector('.zoom-controls').style.display='none'; document.getElementById('err').style.display='block';">
                             <div id="err" class="error-box">
@@ -522,13 +524,12 @@
                         <script>
                             const container = document.getElementById('viewer-container');
                             const img = document.getElementById('imgViewer');
-                            let scale = 1, pX = 0, pY = 0, isDragging = false, startX = 0, startY = 0;
+                            let scale = 1, pX = 0, pY = 0, rotation = 0, isDragging = false, startX = 0, startY = 0;
 
                             function updateTransform() {
-                                img.style.transform = \`translate(\${pX}px, \${pY}px) scale(\${scale})\`;
+                                img.style.transform = \`translate(\${pX}px, \${pY}px) scale(\${scale}) rotate(\${rotation}deg)\`;
                             }
 
-                            // Zoom ciblé sur le point de contact/curseur
                             function setZoom(newScale, targetX, targetY) {
                                 newScale = Math.max(0.5, Math.min(newScale, 8));
                                 if (targetX !== undefined && targetY !== undefined) {
@@ -540,11 +541,26 @@
                                 updateTransform();
                             }
 
+                            // Boutons de rotation
+                            document.getElementById('btnRotateLeft').addEventListener('click', () => {
+                                rotation = (rotation - 90) % 360;
+                                updateTransform();
+                            });
+                            document.getElementById('btnRotateRight').addEventListener('click', () => {
+                                rotation = (rotation + 90) % 360;
+                                updateTransform();
+                            });
+
                             document.getElementById('btnZoomIn').addEventListener('click', () => setZoom(scale * 1.3));
                             document.getElementById('btnZoomOut').addEventListener('click', () => setZoom(scale / 1.3));
-                            document.getElementById('btnReset').addEventListener('click', () => { scale = 1; pX = 0; pY = 0; updateTransform(); });
+                            document.getElementById('btnReset').addEventListener('click', () => { 
+                                scale = 1; 
+                                pX = 0; 
+                                pY = 0; 
+                                rotation = 0; 
+                                updateTransform(); 
+                            });
 
-                            // Zoom molette orienté vers le curseur
                             container.addEventListener('wheel', (e) => {
                                 e.preventDefault();
                                 const rect = container.getBoundingClientRect();
@@ -554,7 +570,6 @@
                                 setZoom(scale * delta, mouseX, mouseY);
                             }, { passive: false });
 
-                            // Déplacement à la souris (Pan)
                             container.addEventListener('mousedown', (e) => {
                                 if (e.target.tagName === 'BUTTON') return;
                                 isDragging = true;
@@ -571,7 +586,6 @@
 
                             window.addEventListener('mouseup', () => isDragging = false);
 
-                            // Support Tactile (Pinch & Pan)
                             let initialDist = 0;
                             container.addEventListener('touchstart', (e) => {
                                 if (e.touches.length === 1) {
