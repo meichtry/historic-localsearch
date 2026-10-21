@@ -37,7 +37,6 @@
             transition: all 0.3s ease;
         }
 
-        /* Conteneur principal centré verticalement sur bureau */
         .left-panel-content {
             margin: auto 0;
             display: flex;
@@ -46,7 +45,6 @@
             width: 100%;
         }
 
-        /* Bouton de repliement sur mobile */
         .mobile-toggle-btn {
             display: none;
             width: 100%;
@@ -98,12 +96,10 @@
             text-align: center;
         }
 
-        /* Espacement accru avant le groupe Annuaire sur PC */
         .form-group-annuaire {
             margin-top: 35px;
         }
 
-        /* Style compact inline pour libellés à gauche */
         .form-group-inline {
             display: flex;
             flex-wrap: wrap;
@@ -204,7 +200,6 @@
             text-align: center;
         }
 
-        /* Responsive Mobile */
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -226,7 +221,6 @@
             .mobile-toggle-btn {
                 display: block;
             }
-            /* Masquage des éléments quand le panneau est replié */
             .left-panel.collapsed {
                 max-height: none;
                 padding: 8px 12px;
@@ -341,7 +335,6 @@
             const mobileToggleBtn = document.getElementById('mobileToggleBtn');
             const leftPanel = document.querySelector('.left-panel');
 
-            // Gestion du repliement sur mobile
             mobileToggleBtn.addEventListener('click', () => {
                 leftPanel.classList.toggle('collapsed');
                 if (leftPanel.classList.contains('collapsed')) {
@@ -496,24 +489,110 @@
                 urlLink.href = url;
                 urlLink.textContent = url;
 
+                // Affichage dans l'iframe avec contrôles complets de Zoom & Pan
                 iframe.srcdoc = `
                     <!DOCTYPE html>
                     <html>
                     <head>
                         <style>
-                            body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #222; overflow: hidden; font-family: Arial, sans-serif; color: #ff6b6b; text-align: center; }
-                            img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                            body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #222; overflow: hidden; font-family: Arial, sans-serif; color: #ff6b6b; text-align: center; user-select: none; }
+                            #viewer-container { width: 100%; height: 100%; overflow: hidden; position: relative; cursor: grab; display: flex; align-items: center; justify-content: center; }
+                            #viewer-container:active { cursor: grabbing; }
+                            img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.05s ease-out; transform-origin: center center; }
+                            .zoom-controls { position: absolute; top: 15px; right: 15px; display: flex; gap: 5px; z-index: 100; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 6px; }
+                            .zoom-controls button { width: 36px; height: 36px; font-size: 18px; font-weight: bold; background: #333; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+                            .zoom-controls button:hover { background: #555; }
                             .error-box { display: none; padding: 20px; }
                             .error-box h3 { margin: 0 0 10px 0; font-size: 1.1em; }
                             .error-box p { margin: 0; color: #ccc; font-size: 0.9em; }
                         </style>
                     </head>
                     <body>
-                        <img src="${url}" alt="Page d'annuaire" onerror="this.style.display='none'; document.getElementById('err').style.display='block';">
-                        <div id="err" class="error-box">
-                            <h3>⚠️ Page introuvable (Erreur 404)</h3>
-                            <p>L'image de la page ${formattedPage} n'existe pas dans les archives PTT pour le code <strong>${annuaire}_${year}${annuaireExtension}</strong>.</p>
+                        <div id="viewer-container">
+                            <div class="zoom-controls">
+                                <button id="btnZoomIn" title="Zoom avant">+</button>
+                                <button id="btnZoomOut" title="Zoom arrière">−</button>
+                                <button id="btnReset" title="Réinitialiser">↺</button>
+                            </div>
+                            <img id="imgViewer" src="${url}" alt="Page d'annuaire" onerror="this.style.display='none'; document.querySelector('.zoom-controls').style.display='none'; document.getElementById('err').style.display='block';">
+                            <div id="err" class="error-box">
+                                <h3>⚠️ Page introuvable (Erreur 404)</h3>
+                                <p>L'image de la page ${formattedPage} n'existe pas dans les archives PTT pour le code <strong>${annuaire}_${year}${annuaireExtension}</strong>.</p>
+                            </div>
                         </div>
+                        <script>
+                            const container = document.getElementById('viewer-container');
+                            const img = document.getElementById('imgViewer');
+                            let scale = 1, pX = 0, pY = 0, isDragging = false, startX = 0, startY = 0;
+
+                            function updateTransform() {
+                                img.style.transform = \`translate(\${pX}px, \${pY}px) scale(\${scale})\`;
+                            }
+
+                            function setZoom(newScale, centerX, centerY) {
+                                newScale = Math.max(0.5, Math.min(newScale, 8));
+                                if (centerX !== undefined && centerY !== undefined) {
+                                    const ratio = newScale / scale;
+                                    pX = centerX - (centerX - pX) * ratio;
+                                    pY = centerY - (centerY - pY) * ratio;
+                                }
+                                scale = newScale;
+                                updateTransform();
+                            }
+
+                            document.getElementById('btnZoomIn').addEventListener('click', () => setZoom(scale * 1.3));
+                            document.getElementById('btnZoomOut').addEventListener('click', () => setZoom(scale / 1.3));
+                            document.getElementById('btnReset').addEventListener('click', () => { scale = 1; pX = 0; pY = 0; updateTransform(); });
+
+                            container.addEventListener('wheel', (e) => {
+                                e.preventDefault();
+                                const delta = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+                                setZoom(scale * delta, e.clientX, e.clientY);
+                            }, { passive: false });
+
+                            container.addEventListener('mousedown', (e) => {
+                                if (e.target.tagName === 'BUTTON') return;
+                                isDragging = true;
+                                startX = e.clientX - pX;
+                                startY = e.clientY - pY;
+                            });
+
+                            window.addEventListener('mousemove', (e) => {
+                                if (!isDragging) return;
+                                pX = e.clientX - startX;
+                                pY = e.clientY - startY;
+                                updateTransform();
+                            });
+
+                            window.addEventListener('mouseup', () => isDragging = false);
+
+                            let initialDist = 0;
+                            container.addEventListener('touchstart', (e) => {
+                                if (e.touches.length === 1) {
+                                    isDragging = true;
+                                    startX = e.touches[0].clientX - pX;
+                                    startY = e.touches[0].clientY - pY;
+                                } else if (e.touches.length === 2) {
+                                    isDragging = false;
+                                    initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                                }
+                            });
+
+                            container.addEventListener('touchmove', (e) => {
+                                if (isDragging && e.touches.length === 1) {
+                                    pX = e.touches[0].clientX - startX;
+                                    pY = e.touches[0].clientY - startY;
+                                    updateTransform();
+                                } else if (e.touches.length === 2 && initialDist > 0) {
+                                    const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                                    const delta = currentDist / initialDist;
+                                    setZoom(scale * delta);
+                                    initialDist = currentDist;
+                                }
+                            });
+
+                            container.addEventListener('touchend', () => isDragging = false);
+                        <\/script>
                     </body>
                     </html>
                 `;
@@ -531,7 +610,6 @@
                 updateIframe();
             }
 
-            // Événements
             regionSelect.addEventListener('change', () => {
                 resetAllOverrides();
                 updateIframe();
@@ -566,13 +644,11 @@
 
             document.getElementById('btnRefresh').addEventListener('click', updateIframe);
 
-            // Boutons d'année (-10, -1, +1, +10)
             document.getElementById('btnYearDec10').addEventListener('click', () => changeYear(-10));
             document.getElementById('btnYearDec1').addEventListener('click', () => changeYear(-1));
             document.getElementById('btnYearInc1').addEventListener('click', () => changeYear(1));
             document.getElementById('btnYearInc10').addEventListener('click', () => changeYear(10));
 
-            // Boutons de page
             document.getElementById('btnPageDec100').addEventListener('click', () => changePage(-100));
             document.getElementById('btnPageDec10').addEventListener('click', () => changePage(-10));
             document.getElementById('btnPageDec1').addEventListener('click', () => changePage(-1));
@@ -584,7 +660,6 @@
                 window.open('https://historic.localsearch.ch/fr/search', '_blank');
             });
 
-            // Navigation au clavier
             document.addEventListener('keydown', (e) => {
                 if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
                     return;
@@ -596,7 +671,6 @@
                 }
             });
 
-            // Initialisation
             initRegionDropdown();
             updateIframe();
         });
