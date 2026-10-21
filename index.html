@@ -34,15 +34,31 @@
             justify-content: space-between;
             overflow-y: auto;
             text-align: center;
+            transition: all 0.3s ease;
         }
 
-        /* Conteneur principal centré verticalement */
+        /* Conteneur principal centré verticalement sur bureau */
         .left-panel-content {
             margin: auto 0;
             display: flex;
             flex-direction: column;
             justify-content: center;
             width: 100%;
+        }
+
+        /* Bouton de repliement sur mobile */
+        .mobile-toggle-btn {
+            display: none;
+            width: 100%;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 4px;
+            margin-bottom: 10px;
         }
 
         .right-panel {
@@ -82,12 +98,12 @@
             text-align: center;
         }
 
-        /* Espace supplémentaire avant le champ Annuaire */
+        /* Espacement accru avant le groupe Annuaire sur PC */
         .form-group-annuaire {
             margin-top: 35px;
         }
 
-        /* Style pour aligner les libellés à gauche des champs */
+        /* Style compact inline pour libellés à gauche */
         .form-group-inline {
             display: flex;
             flex-wrap: wrap;
@@ -188,6 +204,7 @@
             text-align: center;
         }
 
+        /* Responsive Mobile */
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -195,7 +212,31 @@
             .left-panel {
                 flex-basis: auto;
                 width: 100%;
+                max-height: 50vh;
+                padding: 12px;
                 box-shadow: none;
+                border-bottom: 2px solid #ccc;
+            }
+            .left-panel-content {
+                margin: 0;
+            }
+            .form-group-annuaire {
+                margin-top: 10px;
+            }
+            .mobile-toggle-btn {
+                display: block;
+            }
+            /* Masquage des éléments quand le panneau est replié */
+            .left-panel.collapsed {
+                max-height: none;
+                padding: 8px 12px;
+            }
+            .left-panel.collapsed .left-panel-content,
+            .left-panel.collapsed .external-link {
+                display: none;
+            }
+            .left-panel.collapsed .mobile-toggle-btn {
+                margin-bottom: 0;
             }
         }
     </style>
@@ -203,6 +244,8 @@
 <body>
     <div class="container">
         <div class="left-panel">
+            <button id="mobileToggleBtn" class="mobile-toggle-btn">⚙️ Masquer les filtres</button>
+
             <div class="left-panel-content">
                 <!-- a) Sélection de la Région / Canton -->
                 <div class="form-group-inline">
@@ -256,7 +299,7 @@
                     <button id="btnRefresh" style="width: 100%; background-color: #28a745;">Actualiser</button>
                 </div>
 
-                <!-- g) Groupe d'annuaire (Code et Extension) avec espacement accru -->
+                <!-- g) Groupe d'annuaire (Code et Extension) -->
                 <div class="form-group form-group-annuaire">
                     <label for="annuaireText">Annuaire :</label>
                     <input type="text" id="annuaireText" placeholder="Code d'annuaire (auto ou manuel)">
@@ -295,8 +338,19 @@
             const pageError = document.getElementById('pageError');
             const iframe = document.getElementById('resultFrame');
             const urlLink = document.getElementById('urlLink');
+            const mobileToggleBtn = document.getElementById('mobileToggleBtn');
+            const leftPanel = document.querySelector('.left-panel');
 
-            // Remplit le sélecteur de régions une fois pour toutes avec TOUTES les régions
+            // Gestion du repliement sur mobile
+            mobileToggleBtn.addEventListener('click', () => {
+                leftPanel.classList.toggle('collapsed');
+                if (leftPanel.classList.contains('collapsed')) {
+                    mobileToggleBtn.textContent = '⚙️ Afficher les filtres';
+                } else {
+                    mobileToggleBtn.textContent = '⚙️ Masquer les filtres';
+                }
+            });
+
             function initRegionDropdown() {
                 regionSelect.innerHTML = '<option value="">Sélectionnez une région</option>';
                 REGIONS.forEach(reg => {
@@ -305,7 +359,7 @@
                     opt.textContent = reg.label;
                     regionSelect.appendChild(opt);
                 });
-                regionSelect.selectedIndex = 8; // Sélectionne la région par défaut
+                regionSelect.selectedIndex = 8;
             }
 
             function getRegionLabel(regionId) {
@@ -359,7 +413,6 @@
                     return;
                 }
 
-                // Mode Manuel : Saisie libre sans contrôle automatique
                 if (selectedRegionId === 'manual') {
                     ruleNote.textContent = "⚙️ Mode Manuel : saisie libre du code et de l'extension d'annuaire.";
                     ruleNote.className = "info-badge";
@@ -381,7 +434,6 @@
                             ruleNote.style.display = 'none';
                         }
 
-                        // Gestion des éditions
                         if (rule.editions && rule.editions.length > 0) {
                             editionGroup.style.display = 'flex';
                             const currentEd = editionSelect.value;
@@ -404,7 +456,6 @@
                             }
                         }
                     } else {
-                        // Aucun annuaire répertorié pour cette combinaison région / année
                         ruleNote.textContent = `⚠️ Aucun annuaire connu pour ${getRegionLabel(selectedRegionId)} en ${year}.`;
                         ruleNote.className = "info-badge warning";
                         ruleNote.style.display = 'block';
@@ -442,36 +493,30 @@
                 const encodedExt = encodeURIComponent(annuaireExtension);
                 const url = `https://iiif.ptt-archiv.ch/iiif/3/${encodedAnnuaire}_${encodedYear}${encodedExt}_${formattedPage}.jp2/full/max/0/default.jpg`;
 
+                urlLink.href = url;
+                urlLink.textContent = url;
+
                 iframe.srcdoc = `
                     <!DOCTYPE html>
                     <html>
                     <head>
                         <style>
-                            body {
-                                margin: 0;
-                                padding: 0;
-                                height: 100vh;
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                background-color: #222;
-                                overflow: hidden;
-                            }
-                            img {
-                                max-width: 100%;
-                                max-height: 100%;
-                                object-fit: contain;
-                            }
+                            body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #222; overflow: hidden; font-family: Arial, sans-serif; color: #ff6b6b; text-align: center; }
+                            img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                            .error-box { display: none; padding: 20px; }
+                            .error-box h3 { margin: 0 0 10px 0; font-size: 1.1em; }
+                            .error-box p { margin: 0; color: #ccc; font-size: 0.9em; }
                         </style>
                     </head>
                     <body>
-                        <img src="${url}" alt="Page d'annuaire">
+                        <img src="${url}" alt="Page d'annuaire" onerror="this.style.display='none'; document.getElementById('err').style.display='block';">
+                        <div id="err" class="error-box">
+                            <h3>⚠️ Page introuvable (Erreur 404)</h3>
+                            <p>L'image de la page ${formattedPage} n'existe pas dans les archives PTT pour le code <strong>${annuaire}_${year}${annuaireExtension}</strong>.</p>
+                        </div>
                     </body>
                     </html>
                 `;
-
-                urlLink.href = url;
-                urlLink.textContent = url;
             }
 
             function changeYear(delta) {
@@ -557,7 +602,7 @@
         });
 
         // =========================================================================
-        // 2. STRUCTURE DE DONNÉES ET RÈGLES D'ARCHIVES (Facilement extensible ici)
+        // 2. STRUCTURE DE DONNÉES ET RÈGLES D'ARCHIVES
         // =========================================================================
         
         const REGIONS = [
@@ -576,7 +621,7 @@
         ];
 
         const ARCHIVES_RULES = [
-            // --- Zurich (Ville & Canton) : Exceptions exactes & Périodes spécifiques ---
+            // --- Zurich (Ville & Canton) ---
             {
                 regions: ["zh_stadt", "zh_land"],
                 type: "exact",
@@ -596,7 +641,7 @@
                 note: "Année avec 2 éditions publiées"
             },
 
-            // --- Romandie (GE, VD, VS, FR) : Exceptions exactes & Périodes spécifiques ---
+            // --- Romandie (GE, VD, VS, FR) ---
             {
                 regions: ["VD"],
                 type: "exact",
@@ -655,8 +700,6 @@
                 baseCode: "P-260-1_Genève",
                 note: "Genève - Vaud- Valais (Genève avec accent)"
             },
-
-            // --- Romandie (GE, VD, VS, FR) : Période globale ---
             {
                 regions: ["GE", "VD", "VS"],
                 type: "period",
@@ -674,7 +717,7 @@
                 note: "Suisse romande (1911-1950)"
             },
 
-            // --- Zurich & Thurgovie : Périodes globales ---
+            // --- Zurich & Thurgovie ---
             {
                 regions: ["zh_stadt", "zh_land"],
                 type: "period",
@@ -716,7 +759,7 @@
                 note: "Zurich Canton & Thurgovie (dès 1947)"
             },
 
-            // --- Berne, Soleure & autres : Exceptions exactes & Périodes spécifiques ---
+            // --- Berne & Soleure ---
             {
                 regions: ["SO"],
                 type: "exact",
@@ -777,8 +820,6 @@
                 baseCode: "P-260-1_Bern",
                 note: "Bâle, Berne, Soleure & ... (1901-1910)"
             },
-
-            // --- Berne, Soleure & autres : Périodes globales ---
             {
                 regions: ["BE_stadt", "BE_land", "SO"],
                 type: "period",
